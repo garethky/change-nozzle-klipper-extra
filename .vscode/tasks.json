@@ -1,0 +1,13 @@
+{
+    // See https://go.microsoft.com/fwlink/?LinkId=733558
+    // for the documentation about the tasks.json format
+    "version": "2.0.0",
+    "tasks": [
+        {
+            "label": "deploy_change_nozzle_extra",
+            "type": "shell",
+            "command": "rsync -iahp ./* pi@voron24.local:/home/pi/change-nozzle-klipper-extra/",
+            "problemMatcher": []
+        }
+    ]
+}
