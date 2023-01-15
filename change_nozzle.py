@@ -84,11 +84,10 @@ class ExtruderChangeNozzleExtension:
             return vars[self.nozzle_variable_key]
         return {'nozzle_diameter': None, 'max_extrude_cross_section': None}
 
-    # wrap the status the object on the extruder so it includes nozzle_diameter
+    # wrap the status object on the extruder so it includes nozzle_diameter
     def wrap_status(self):
         extruder = self.extruder
         wrapped_get_status = self.extruder.get_status
-        #wrapped_get_status = self.extruder.get_status
         def get_status_wrapper(self, eventtime):
             sts = wrapped_get_status(eventtime)
             sts['nozzle_diameter'] = self.nozzle_diameter

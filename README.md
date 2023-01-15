@@ -1,6 +1,6 @@
 # Change Nozzles
 
-Change the nozzle size on your klipper printer without editing the config and rebooting.
+Change the nozzle diameter on your klipper printer without editing the config and rebooting.
 
 Adds one new command:
 CHANGE_NOZZLE [EXTRUDER=<config_name>] [NOZZLE_DIAMETER=<nozzle_diameter>] [MAX_EXTRUDE_CROSS_SECTION=<pressure_advance_smooth_time>]
@@ -25,6 +25,12 @@ e.g.:
 
 This can be used in purge line and calibration print macros that want to extrude
  an appropriate amount of plastic relative to the nozzle size.
+
+## ⚠️ Warning: This extra is potentially brittle and may be broken by Klipper changes
+
+This extra relies on some [internal details](https://github.com/Klipper3d/klipper/blame/4671cf2d0e3ec864e72766cb1f6e24f1a308f794/klippy/kinematics/extruder.py#L164) of Extruder.py not changing. The code is pretty stable and hasn't changed in around 4 years. But if you see this code change please file a bug here an dI will attempt to get it back up to date in a timely manner.
+
+I'd prefer if this was a patch but this way its something the community can use while we work to merge this into klipper. The end of life plan here is to copy the pattern from how [frame expansion compensation](https://github.com/alchemyEngine/klipper_frame_expansion_comp/blob/a6e0fe0735604aef89cba6962e2cab08a8ac1895/frame_expansion_compensation.py#L69) was merged. You'll get an update that turns this into something that just prints a warning.
 
 # Filaments - Filament Presets for Klipper
 
