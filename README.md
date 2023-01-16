@@ -87,3 +87,97 @@ Enable the `CHANGE_NOZZLE` command
 ```
 [change-nozzle]
 ```
+
+----
+
+# Usage Reference
+
+## Nozzle Change Macros
+You would generally set up some macros that set the nozzle diameter and give them friendly names:
+
+```
+[gcode_macro NOZZLE_40]
+gcode:
+    CHANGE_NOZZLE NOZZLE_DIAMETER=0.4
+
+[gcode_macro NOZZLE_60]
+gcode:
+    CHANGE_NOZZLE NOZZLE_DIAMETER=0.6
+```
+
+You wouldn't normally need to specify the EXTRUDER because klipper always has an active extruder. In a multi-tool printer you switch active extruders first and then change the nozzle size.
+
+## Selecting PRESSURE_ADVANCE from a single slicer filament
+
+Slicers allow you run some custom gcodes for your filament and klipper users often use this to set the exact `PRESSURE_ADVANCE` for a filament. The `PRESSURE_ADVANCE` value for a specific filament varies with nozzle diameter. You could keep a different preset for every nozzle size but that is tedious. Now you can write a macro that takes in the pressure advance values for different nozzle sizes and sets the appropriate `ADVANCE` value based on what nozzle is in the printer when the print starts:
+
+```
+[gcode_macro _SET_PA_BY_NOZZLE]
+gcode:
+    {% set nozzle = params.NOZZLE}
+    {% set nozzle_diameter = printer.toolhead.extruder.nozzle_diameter %}
+    {% if nozzle == nozzle_diameter}
+        SET_PRESSURE_ADVANCE ADVANCE={params.ADVANCE}
+```
+
+Then call the macro from the GCode in in your slicers filament preset:
+
+```
+_SET_PA_BY_NOZZLE NOZZLE=0.25 ADVANCE=1.2
+_SET_PA_BY_NOZZLE NOZZLE=0.4 ADVANCE=0.8
+_SET_PA_BY_NOZZLE NOZZLE=0.6 ADVANCE=0.3
+```
+
+`PRESSURE_ADVANCE` will only be set if the nozzle diameter on the active extruder matches the diameter of the NOZZLE parameter.
+
+## Vary the Extruded Filament in Macros
+
+If you are writing a macro that prints filament, such as a claibration macro, you can parameterize the macro such that the nozzle diameter and filament diameter are taken into account:
+
+```
+    {% set nozzle_diameter = printer.toolhead.extruder.nozzle_diameter %}
+    {% set filament_diameter = printer.configfile.config["extruder"]["filament_diameter"]|float %}
+    
+```
+
+In your macro code you can work out the amount of filament to extruder per unit distance if you know the layer height:
+
+```
+{% set layer_height = 0.2 %}
+{% set line_width = nozzle_diameter %}
+{% set extrusion_factor = line_width * layer_height / ((filament_diameter / 2)*(filament_diameter / 2) * 3.14159) | float %}
+```
+
+Then extrusion moves look like this:
+
+```
+    G1 X25 E{extrusion_factor * 25}
+```
+
+A simple purge line macro can be written that takes advantage of this to purge a nozzle appropriate amount of material when the print starts:
+```
+[gcode_macro PURGE_LINE]
+gcode:
+    SAVE_GCODE_STATE NAME=PURGE_LINE
+    {% set purge_start_x = params.PRINT_START_X|default(5.0)|float %}
+    {% set purge_start_y = params.PRINT_START_Y|default(-5.0)|float %}
+    {% set layer_height = 0.3 %}
+    {% set line_width = nozzle_diameter %}
+    {% set filament_diameter = printer.configfile.config["extruder"]["filament_diameter"]|float %}
+    {% set extrusion_factor = line_width * layer_height / ((filament_diameter / 2)*(filament_diameter / 2) * 3.14159) | float %}
+
+    ; purge/prime nozzle
+    G90 ; use absolute coordinates
+    ; go to the start of the print area, but -5 in Y
+    G1 X{purge_start_x} Y{purge_start_y} Z{layer_height} F7200.0 ; go to the purge start location
+    G91 ; relative coordinates
+    M83 ; extruder relative mode
+    G92 E0.0
+    G1 X40.0 E{extrusion_factor * 2 * 40} F1000.0  ; narrow start line
+    G1 X40.0 E{extrusion_factor * 3 * 40} F1000.0  ; priming thick outro line
+    G92 E0.0
+    G1 X3.0 Y3.0 F1000.0    ; move the nozzle away from the end of the purge line so the print doesn't drag the nozzle back through it.
+    G1 F7200.0
+
+    RESTORE_GCODE_STATE NAME=PURGE_LINE
+```

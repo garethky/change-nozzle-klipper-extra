@@ -9,7 +9,8 @@
 # https://github.com/Klipper3d/klipper/blob/master/klippy/kinematics/extruder.py
 # So the objects are somewhat duplicated and the mehtodology is the same
 
-import math, logging
+import math
+import logging
 import types
 
 class ExtruderChangeNozzleExtension:
@@ -36,7 +37,7 @@ class ExtruderChangeNozzleExtension:
         self.gcode.register_mux_command("CHANGE_NOZZLE", "EXTRUDER",
                     self.extruder_name, self.cmd_CHANGE_NOZZLE,
                     desc=self.cmd_default_CHANGE_NOZZLE_help)
-    
+
     def change_nozzle(self, user_nozzle_diameter, user_max_cross_section):
         nozzle_diameter = self.config.getfloat('nozzle_diameter', above=0.)
         if not user_nozzle_diameter is None:
@@ -64,7 +65,7 @@ class ExtruderChangeNozzleExtension:
         self.extruder.max_e_accel = self.config.getfloat(
             'max_extrude_only_accel', max_accel * def_max_extrude_ratio
             , above=0.)
-    
+
     # Save extruder settings to [save_variables]
     def save(self, nozzle_diameter, max_cross_section):
         gcmd_save = self.gcode.create_gcode_command("SAVE_VARIABLE",
@@ -76,12 +77,12 @@ class ExtruderChangeNozzleExtension:
                             })
                         })
         self.save_variables.cmd_SAVE_VARIABLE(gcmd_save)
-    
+
     def load(self):
         event_time = self.reactor.monotonic()
-        vars = self.save_variables.get_status(event_time)['variables']
-        if self.nozzle_variable_key in vars:
-            return vars[self.nozzle_variable_key]
+        svv = self.save_variables.get_status(event_time)['variables']
+        if self.nozzle_variable_key in svv:
+            return svv[self.nozzle_variable_key]
         return {'nozzle_diameter': None, 'max_extrude_cross_section': None}
 
     # wrap the status object on the extruder so it includes nozzle_diameter
