@@ -114,10 +114,11 @@ Slicers allow you run some custom gcodes for your filament and klipper users oft
 ```
 [gcode_macro _SET_PA_BY_NOZZLE]
 gcode:
-    {% set nozzle = params.NOZZLE}
+    {% set nozzle = params.NOZZLE %}
     {% set nozzle_diameter = printer.toolhead.extruder.nozzle_diameter %}
-    {% if nozzle == nozzle_diameter}
+    {% if nozzle == nozzle_diameter %}
         SET_PRESSURE_ADVANCE ADVANCE={params.ADVANCE}
+    {% endif %}
 ```
 
 Then call the macro from the GCode in in your slicers filament preset:
@@ -140,12 +141,13 @@ If you are writing a macro that prints filament, such as a claibration macro, yo
     
 ```
 
-In your macro code you can work out the amount of filament to extruder per unit distance if you know the layer height:
+In your macro code you can work out the amount of filament to extruder per unit distance if you know the layer height and line width:
 
 ```
 {% set layer_height = 0.2 %}
 {% set line_width = nozzle_diameter %}
-{% set extrusion_factor = line_width * layer_height / ((filament_diameter / 2)*(filament_diameter / 2) * 3.14159) | float %}
+{% set filament_area = (((filament_diameter / 2) * (filament_diameter / 2)) * 3.14159) %}
+{% set extrusion_factor = (line_width * layer_height) / filament_area | float %}
 ```
 
 Then extrusion moves look like this:
@@ -154,7 +156,7 @@ Then extrusion moves look like this:
     G1 X25 E{extrusion_factor * 25}
 ```
 
-A simple purge line macro can be written that takes advantage of this to purge a nozzle appropriate amount of material when the print starts:
+A purge line macro can be written that takes advantage of this to purge a nozzle appropriate amount of material:
 ```
 [gcode_macro PURGE_LINE]
 gcode:
