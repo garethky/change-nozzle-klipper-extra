@@ -32,8 +32,6 @@ This extra relies on some [internal details](https://github.com/Klipper3d/klippe
 
 I'd prefer if this was a patch but this way its something the community can use while we work to merge this into klipper. The end of life plan here is to copy the pattern from how [frame expansion compensation](https://github.com/alchemyEngine/klipper_frame_expansion_comp/blob/a6e0fe0735604aef89cba6962e2cab08a8ac1895/frame_expansion_compensation.py#L69) was merged. You'll get an update that turns this into something that just prints a warning.
 
-# Filaments - Filament Presets for Klipper
-
 # Installing
 
 Clone this git repo to your printers home directory (e.g. /home/pi):
@@ -53,7 +51,7 @@ Optionally you can tell Moonraker's update manager about this plugin by
 adding this configuration block to the `moonraker.conf` of your printer:
 
 ```text
-[update_manager client Filaments]
+[update_manager client NozzleChange]
 type: git_repo
 path: ~/change-nozzle-klipper-extra
 primary_branch: mainline
@@ -67,7 +65,7 @@ managed_services: klipper
 # G-Code Commands
 
 ### [change_nozzle]
-The following commands are available when a [filaments config section](#filaments) is enabled.
+The following commands are available when a [nozzle change config section](#change_nozzle) is enabled.
 
 #### CHANGE_NOZZLE
 `CHANGE_NOZZLE EXTRUDER=<config_name>] [NOZZLE_DIAMETER=<nozzle_diameter>]
@@ -112,28 +110,38 @@ You wouldn't normally need to specify the EXTRUDER because klipper always has an
 Slicers allow you run some custom gcodes for your filament and klipper users often use this to set the exact `PRESSURE_ADVANCE` for a filament. The `PRESSURE_ADVANCE` value for a specific filament varies with nozzle diameter. You could keep a different preset for every nozzle size but that is tedious. Now you can write a macro that takes in the pressure advance values for different nozzle sizes and sets the appropriate `ADVANCE` value based on what nozzle is in the printer when the print starts:
 
 ```
-[gcode_macro _SET_PA_BY_NOZZLE]
+[gcode_macro SET_EXTRUDER_PA]
 gcode:
-    {% set nozzle = params.NOZZLE %}
-    {% set nozzle_diameter = printer.toolhead.extruder.nozzle_diameter %}
-    {% if nozzle == nozzle_diameter %}
-        SET_PRESSURE_ADVANCE ADVANCE={params.ADVANCE}
+    {% set extruder = 'extruder' + (params.EXTRUDER | default('')) %}
+    {% if extruder == 'extruder0' %}
+        {% set extruder = 'extruder' %}
+    {% endif %}
+    {% set extruder_nozzle_diameter = (printer[extruder]).nozzle_diameter %}
+    {% set nozzle = (params.NOZZLE | default(extruder_nozzle_diameter) | float) %}
+    {% set advance = params.ADVANCE | float %}
+    # fall back to the default PA value from the config file
+    {% if not advance %}
+        {% set advance = printer.configfile.config[extruder].pressure_advance %}
+    {% endif %}
+
+    {% if nozzle == extruder_nozzle_diameter %}
+        SET_PRESSURE_ADVANCE EXTRUDER={extruder} ADVANCE={advance}
     {% endif %}
 ```
 
 Then call the macro from the GCode in in your slicers filament preset:
 
 ```
-_SET_PA_BY_NOZZLE NOZZLE=0.25 ADVANCE=1.2
-_SET_PA_BY_NOZZLE NOZZLE=0.4 ADVANCE=0.8
-_SET_PA_BY_NOZZLE NOZZLE=0.6 ADVANCE=0.3
+SET_EXTRUDER_PA NOZZLE=0.25 ADVANCE=1.2
+SET_EXTRUDER_PA NOZZLE=0.4 ADVANCE=0.8
+SET_EXTRUDER_PA NOZZLE=0.6 ADVANCE=0.3
 ```
 
 `PRESSURE_ADVANCE` will only be set if the nozzle diameter on the active extruder matches the diameter of the NOZZLE parameter.
 
 ## Vary the Extruded Filament in Macros
 
-If you are writing a macro that prints filament, such as a claibration macro, you can parameterize the macro such that the nozzle diameter and filament diameter are taken into account:
+If you are writing a macro that prints filament, such as a calibration macro, you can parameterize the macro such that the nozzle diameter and filament diameter are taken into account:
 
 ```
     {% set nozzle_diameter = printer.toolhead.extruder.nozzle_diameter %}
