@@ -80,10 +80,10 @@ the the active hotend.
 # Config Reference
 This extra requires that you have `[save_variables]` set up. If you don't it will throw an exception on startup.
 
-## [change-nozzle]
+## [change_nozzle]
 Enable the `CHANGE_NOZZLE` command
 ```
-[change-nozzle]
+[change_nozzle]
 ```
 
 ----
